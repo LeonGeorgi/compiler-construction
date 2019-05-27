@@ -18,9 +18,13 @@ def main():
     # Tokenize
     tokens = list(lexer)
 
-    # parse
+    # parse and create AST
     parser = Parser(tokens)
-    parser.parseS()
+    ast = parser.parseS()
+
+    # pretty print the AST
+    print(str(ast))
+    print(str(ast.calculate()))
 
 
 if __name__ == '__main__':

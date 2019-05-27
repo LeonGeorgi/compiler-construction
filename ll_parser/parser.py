@@ -3,6 +3,10 @@
 #
 # Authors: Christian Menard
 #          Norman Rink
+from typing import Union
+
+from ll_parser.ast import IntLit, FloatLit, Identifier, BinOp
+
 
 class Parser:
     """Parser for arithmetic expressions
@@ -70,16 +74,18 @@ class Parser:
                 or t.type == 'INT_LIT'
                 or t.type == 'FLOAT_LIT'
                 or t.type == 'IDENTIFIER'):
-            print(self.parseE())
-            # we should have processed all tokens by now
+            tree = self.parseE()
             assert len(self.remaining_tokens) == 0
+            # we should have processed all tokens by now
+
+            return tree
         else:
             raise RuntimeError('Error while parsing S (current token %s)' % t)
 
     # tokens = ('PLUS', 'STAR', 'LPARAN', 'RPARAN', 'INT_LIT', 'FLOAT_LIT',
     #           'IDENTIFIER')
 
-    def parseE(self):
+    def parseE(self) -> Union[IntLit, FloatLit, Identifier, BinOp]:
         """Parse non-terminal E"""
         t = self.current_token
 
@@ -91,7 +97,7 @@ class Parser:
         tval = self.parseT()
         return self.parseEp(left=tval)
 
-    def parseT(self):
+    def parseT(self) -> Union[IntLit, FloatLit, Identifier, BinOp]:
         """Parse non-terminal T"""
         t = self.current_token
 
@@ -102,10 +108,10 @@ class Parser:
             raise RuntimeError('T')
 
         fval = self.parseF()
-        tpval = self.parseTp(fval)
+        tpval = self.parseTp(left=fval)
         return tpval
 
-    def parseF(self):
+    def parseF(self) -> Union[IntLit, FloatLit, Identifier]:
         """Parse non-terminal F"""
         t = self.current_token
 
@@ -115,25 +121,26 @@ class Parser:
         if t.type == 'LPARAN':
             self.consume_token()
 
-            val = self.parseE()
+            parsed_value = self.parseE()
 
             self.accept_token('RPARAN')
-            return val
+            return parsed_value
         elif t.type == 'INT_LIT':
             val = int(t.value)
             self.consume_token()
-            return val
+            return IntLit(val)
         elif t.type == 'FLOAT_LIT':
             val = float(t.value)
             self.consume_token()
-            return val
+            return FloatLit(val)
         elif t.type == 'IDENTIFIER':
+            name = str(t)
             self.consume_token()
-            # TODO
+            return Identifier(name)
         else:
             raise RuntimeError('F')
 
-    def parseTp(self, left):
+    def parseTp(self, left: Union[IntLit, FloatLit, Identifier, BinOp]) -> Union[IntLit, FloatLit, Identifier, BinOp]:
         """
         Parse non-terminal Tp
         
@@ -148,23 +155,22 @@ class Parser:
         elif t.type == 'STAR':
             self.consume_token()
 
-            fval = self.parseF()
-            tpval = self.parseTp(left * fval)
-
-            return tpval
+            value = self.parseF()
+            right = self.parseTp(value)
+            return BinOp('MUL', left, right)
         else:
             raise RuntimeError('T\'')
 
-    def parseEp(self, left):
+    def parseEp(self, left: Union[IntLit, FloatLit, Identifier, BinOp]) -> Union[IntLit, FloatLit, Identifier, BinOp]:
         """Parse non-terminal Ep"""
         t = self.current_token
 
-        if t is None or t == 'RPARAN':
+        if t is None or t.type == 'RPARAN':
             return left
         elif t.type == 'PLUS':
             self.consume_token()
-            tval = self.parseT()
-            epval = self.parseEp(left + tval)
-            return epval
+            value = self.parseT()
+            right = self.parseEp(value)
+            return BinOp('ADD', left, right)
         else:
             raise RuntimeError('E\'')
