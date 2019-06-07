@@ -7,13 +7,14 @@
 
 import sys
 
+from ll_parser.sema import Sema
 from .lexer import lexer
 from .parser import Parser
 
 
 def main():
     # read input
-    lexer.input(sys.stdin.read())
+    lexer.input(input("INPUT: "))
 
     # Tokenize
     tokens = list(lexer)
@@ -22,9 +23,14 @@ def main():
     parser = Parser(tokens)
     ast = parser.parseS()
 
+
+    # perform semantic analysis
+    sema = Sema(ast)
+    ok = sema.check()
+
     # pretty print the AST
     print(str(ast))
-    print(str(ast.calculate()))
+    print(f'Result: {ok}')
 
 
 if __name__ == '__main__':

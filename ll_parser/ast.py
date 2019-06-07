@@ -81,13 +81,11 @@ class Identifier:
            name (str): Name of the identifier
         """
         self.name = name
-
-    def calculate(self):
-        raise RuntimeError('Identifier.calculate() is not implemented!')
+        self.value = None
 
     def __str__(self):
         """Convert to string (pretty print)"""
-        return 'IDENTIFIER <%s>\n' % (self.name)
+        return 'IDENTIFIER <%s>\n' % self.name
 
 
 class BinOp:
@@ -109,20 +107,37 @@ class BinOp:
         self.left = left
         self.right = right
 
-    def calculate(self):
-        left_value = self.left.calculate()
-        right_value = self.right.calculate()
+    def __str__(self):
+        """Convert to string (pretty print)"""
+        result = 'BINARY OP. <%s>\n' % self.kind
+        result += indent(str(self.left), 2)
+        result += indent(str(self.right), 2)
+        return result
 
-        if self.kind == 'MUL':
-            return left_value * right_value
-        elif self.kind == 'ADD':
-            return left_value + right_value
-        else:
-            raise RuntimeError(f'Illegal operation type: {self.kind}')
+
+class Let:
+    """Let AST node
+
+    Args:
+       name (str): Name of the identifier
+       init: AST node representing the initializer expression
+       expr: AST node representing the nested expression
+
+    Attributes:
+       name (str): Name of the identifier
+       init: AST node representing the initializer expression
+       expr: AST node representing the nested expression
+    """
+
+    def __init__(self, name, init, expr):
+        self.name = name
+        self.init = init
+        self.expr = expr
 
     def __str__(self):
         """Convert to string (pretty print)"""
-        result = f'BINARY OP. <{self.kind}>\n'
-        result += indent(str(self.left), 2)
-        result += indent(str(self.right), 2)
+        result = 'LET %s BE\n' % self.name
+        result += indent(str(self.init), 2)
+        result += 'IN\n'
+        result += indent(str(self.expr), 2)
         return result

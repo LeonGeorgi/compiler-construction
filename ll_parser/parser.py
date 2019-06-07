@@ -5,7 +5,7 @@
 #          Norman Rink
 from typing import Union
 
-from ll_parser.ast import IntLit, FloatLit, Identifier, BinOp
+from ll_parser.ast import IntLit, FloatLit, Identifier, BinOp, Let
 
 
 class Parser:
@@ -70,10 +70,7 @@ class Parser:
         if t is None:
             raise RuntimeError('Error while parsing S (end of stream)')
 
-        if (t.type == 'LPARAN'
-                or t.type == 'INT_LIT'
-                or t.type == 'FLOAT_LIT'
-                or t.type == 'IDENTIFIER'):
+        if t.type in ('LPARAN', 'INT_LIT', 'FLOAT_LIT', 'IDENTIFIER', 'LET'):
             tree = self.parseE()
             assert len(self.remaining_tokens) == 0
             # we should have processed all tokens by now
@@ -85,14 +82,25 @@ class Parser:
     # tokens = ('PLUS', 'STAR', 'LPARAN', 'RPARAN', 'INT_LIT', 'FLOAT_LIT',
     #           'IDENTIFIER')
 
-    def parseE(self) -> Union[IntLit, FloatLit, Identifier, BinOp]:
+    def parseE(self) -> Union[Let, IntLit, FloatLit, Identifier, BinOp]:
         """Parse non-terminal E"""
         t = self.current_token
 
         if t is None:
             raise RuntimeError('E')
-        if t.type not in ('LPARAN', 'INT_LIT', 'FLOAT_LIT', 'IDENTIFIER'):
+        if t.type not in ('LPARAN', 'INT_LIT', 'FLOAT_LIT', 'IDENTIFIER', 'LET'):
             raise RuntimeError('E')
+
+        if t.type == 'LET':
+            self.consume_token()
+            t = self.current_token
+            self.accept_token('IDENTIFIER')
+            self.accept_token('EQUALS')
+            init = self.parseE()
+            self.accept_token('IN')
+            expr = self.parseE()
+
+            return Let(t.value, init, expr)
 
         tval = self.parseT()
         return self.parseEp(left=tval)
@@ -134,7 +142,7 @@ class Parser:
             self.consume_token()
             return FloatLit(val)
         elif t.type == 'IDENTIFIER':
-            name = str(t)
+            name = str(t.value)
             self.consume_token()
             return Identifier(name)
         else:
@@ -150,7 +158,7 @@ class Parser:
 
         t = self.current_token
 
-        if t is None or t.type in ('PLUS', 'RPARAN'):
+        if t is None or t.type in ('PLUS', 'RPARAN', 'IN'):
             return left
         elif t.type == 'STAR':
             self.consume_token()
@@ -165,7 +173,7 @@ class Parser:
         """Parse non-terminal Ep"""
         t = self.current_token
 
-        if t is None or t.type == 'RPARAN':
+        if t is None or t.type in ('RPARAN', 'IN'):
             return left
         elif t.type == 'PLUS':
             self.consume_token()
